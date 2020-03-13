@@ -1,0 +1,1 @@
+# simplexspatial-loader-osm
