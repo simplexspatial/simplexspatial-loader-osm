@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 SimplexPortal Ltd
+ * Copyright 2020 SimplexPortal Ltd
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,11 @@
 
 package com.simplexportal.spatial.loadosm
 
-import org.backuity.clist.Cli
-
 object Main extends App {
 
-  Cli
-    .parse(args)
-    .withCommand(new Parameters)(params => {
-      new LoadStreaming().loadBatches(params.osmFile, params.blockSize)
-    })
+  Config(args) match {
+    case Some(config) =>
+      new LoadStreaming().loadBatches(config.osmFile, config.blockSize, config.count)
+    case None =>
+  }
 }

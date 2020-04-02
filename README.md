@@ -23,44 +23,6 @@ sbt "loadOSM/runMain com.simplexportal.spatial.loadosm.Main --block-size=300 /ho
 ```
 
 ## Running thru CLI
-
-
-### Running SimplexSpatial
-
-Using the tar generated from the Simplexspatial repo:
-
-```bash
-bin/simplexspatial-core \
-    -java-home /usr/lib/jvm/java-8-openjdk-amd64 \
-    -jvm-debug 9010 \
-    -J-Xms1G \
-    -J-Xmx4G  \
-    -Dconfig.file server-config.conf \
-    -Dakka.remote.artery.canonical.port=2550  \
-    -Dsimplexportal.spatial.api.http.port=8080
-
-bin/simplexspatial-core \
-    -java-home /usr/lib/jvm/java-8-openjdk-amd64 \
-    -jvm-debug 9011 \
-    -J-Xms1G \
-    -J-Xmx4G  \
-    -Dconfig.file server-config.conf \
-    -Dakka.remote.artery.canonical.port=2551  \
-    -Dsimplexportal.spatial.api.http.port=8081
-
-bin/simplexspatial-core \
-    -java-home /usr/lib/jvm/java-8-openjdk-amd64 \
-    -jvm-debug 9012 \
-    -J-Xms1G \
-    -J-Xmx4G  \
-    -Dconfig.file server-config.conf \
-    -Dakka.remote.artery.canonical.port=2552  \
-    -Dsimplexportal.spatial.api.http.port=8082
-
-```
-
-### Running osm loader
-
 Using the previous zip, uncompress it and from the folder where you
 uncompressed:
 

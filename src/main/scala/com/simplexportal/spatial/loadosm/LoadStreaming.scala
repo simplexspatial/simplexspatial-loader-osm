@@ -23,9 +23,10 @@ import akka.actor.ActorSystem
 import akka.grpc.GrpcClientSettings
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
+import com.acervera.osm4scala.EntityIterator
 import com.acervera.osm4scala.EntityIterator.fromPbf
-import com.acervera.osm4scala.model.{NodeEntity, OSMTypes, WayEntity}
-import com.simplexportal.spatial.api.grpc._
+import com.acervera.osm4scala.model.{NodeEntity, OSMEntity, OSMTypes, WayEntity}
+import com.simplexportal.spatial.index.grid.entrypoints.grpc._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -46,25 +47,54 @@ class LoadStreaming {
   implicit val ec = sys.dispatcher
 
   // Take details how to connect to the service from the config.
-  val clientSettings = GrpcClientSettings.fromConfig(DataService.name)
+  val clientSettings = GrpcClientSettings.fromConfig(GRPCEntryPoint.name)
 
   // Create a client-side stub for the service
-  val client: DataService = DataServiceClient(clientSettings)
+  val client: GRPCEntryPoint = GRPCEntryPointClient(clientSettings)
 
-  def loadBatches(osmFile: File, blockSize: Int): Unit = {
+  private def analiseFile(osmFile: File): (Long, Long, Long) =
+    EntityIterator.fromPbf(new FileInputStream(osmFile)).foldLeft((0L, 0L, 0L)) {
+      case ((nodes, ways, others), _: NodeEntity) => (nodes + 1, ways, others)
+      case ((nodes, ways, others), _: WayEntity)  => (nodes, ways + 1, others)
+      case ((nodes, ways, others), _)             => (nodes, ways, others + 1)
+    }
 
+  def loadBatches(osmFile: File, blockSize: Int, count: Boolean): Unit = {
     println(
       s"Loading batches data from [${osmFile.getAbsolutePath}]"
     )
 
-    val reply = client
-      .streamBatchCommands(createBatchSource(osmFile, blockSize))
-      .runForeach(i =>
-        println(
-          s"Sent ${nodes} nodes,  ${ways} ways and ${others} others in ${(System
-            .currentTimeMillis() - startTime) / 1000} seconds.  ${blocksSent} blocks sent. Response: ${i}"
-        )
-      )
+    val (totalNodes, totalWays, totalOthers) = if (count) analiseFile(osmFile) else (-1L, -1L, -1L)
+    println(
+      s"Metrics before start to load data: Total nodes [${totalNodes}] | Total ways [${totalWays}] | Total others [${totalOthers}]"
+    )
+
+    run(Source.fromIterator(() => fromPbf(new FileInputStream(osmFile))), blockSize, totalNodes, totalWays, totalOthers)
+
+  }
+
+  def run(
+      source: Source[OSMEntity, NotUsed],
+      blockSize: Int,
+      totalNodes: Long = -1,
+      totalWays: Long = -1,
+      totalOthers: Long = -1
+  ): Unit = {
+
+    println("Starting the streaming >>>>> ")
+
+    val reply = client.streamBatchCommands(createBatchSource(source, blockSize))
+      .runForeach {
+        case ACK(ACK.ACKValue.Done(value), _) =>
+          println(
+            s"Sent ${nodes}/${totalNodes} nodes,  ${ways}/${totalWays} ways and ${others}/${totalOthers} others in ${(System
+              .currentTimeMillis() - startTime) / 1000} seconds.  ${blocksSent} blocks sent. Response: ${value}"
+          )
+        case ACK(ACK.ACKValue.NotDone(value), _) =>
+          throw new Exception(s"Error found ${value}")
+        case response =>
+          throw new Exception(s"Unkown response ${response}")
+      }
 
     reply.onComplete {
       case Success(msg) =>
@@ -87,13 +117,11 @@ class LoadStreaming {
   }
 
   def createBatchSource(
-      osmFile: File,
+      source: Source[OSMEntity, NotUsed],
       blockSize: Int
   ): Source[ExecuteBatchCmd, NotUsed] = {
-    val pbfIS: InputStream = new FileInputStream(osmFile)
 
-    Source
-      .fromIterator(() => fromPbf(pbfIS))
+    source
       .filter(osmEntity => osmEntity.osmModel != OSMTypes.Relation)
       .map {
         case nodeEntity: NodeEntity =>
@@ -111,7 +139,7 @@ class LoadStreaming {
           ExecuteCmd().withWay(
             AddWayCmd(wayEntity.id, wayEntity.nodes, wayEntity.tags)
           )
-        case other =>
+        case _ =>
           others += 1
           null
       }
