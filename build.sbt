@@ -6,7 +6,6 @@ scalaVersion := "2.12.11"
 
 lazy val simplexspatialVersion = "0.0.1-SNAPSHOT"
 lazy val akkaVersion = "2.6.4"
-lazy val akkaGrpcVersion = "0.8.0"
 
 organization := "com.simplexportal.spatial"
 organizationHomepage := Some(url("http://www.simplexportal.com"))
