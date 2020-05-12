@@ -37,13 +37,13 @@ class LoadStreamingSpec extends AnyWordSpecLike with Matchers {
   mapper.registerModule(DefaultScalaModule)
 
   "Load" should {
-    "Load one way example" when {
-      val entities: scala.collection.immutable.Seq[OSMEntity] =
-        mapper.readValue(new File("src/test/resources/6165679/nodes.json"), new TypeReference[Seq[NodeEntity]]() {}) ++
-          mapper.readValue(new File("src/test/resources/6165679/ways.json"), new TypeReference[Seq[WayEntity]]() {})
-
-      new LoadStreaming().run(Source(entities), 10)
-    }
+//    "Load one way example" when {
+//      val entities: scala.collection.immutable.Seq[OSMEntity] =
+//        mapper.readValue(new File("src/test/resources/6165679/nodes.json"), new TypeReference[Seq[NodeEntity]]() {}) ++
+//          mapper.readValue(new File("src/test/resources/6165679/ways.json"), new TypeReference[Seq[WayEntity]]() {})
+//
+//      new LoadStreaming().run(Source(entities), 10)
+//    }
     "load full Monaco streaming in batch mode" when {
       "it uses block of 300" in {
 //        new LoadStreaming().run(
